@@ -1,0 +1,10 @@
+# Data Handling and Numerics
+pandas
+numpy
+
+# Visualization
+matplotlib
+seaborn
+
+# # Stats
+scikit-learn

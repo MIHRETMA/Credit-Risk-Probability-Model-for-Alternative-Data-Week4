@@ -4,6 +4,7 @@ Project: Credit Risk Probability Model
 This repository contains code, notebooks and documentation for Week 4 analysis tasks
 
 ## Used structure
+```
 .
 ├── README.md
 ├── data/
@@ -27,6 +28,7 @@ This repository contains code, notebooks and documentation for Week 4 analysis t
 ├── requirements.txt
 ├── README.md
 
+```
 
 ## Quickstart
 1. Clone repository

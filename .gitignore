@@ -2,3 +2,4 @@
 /.venv
 mlflow.db
 /src/mlruns
+/src/mlflow.db

@@ -8,6 +8,8 @@ from sklearn.impute import SimpleImputer
 
 from optbinning import BinningProcess
 
+from proxy_target import create_proxy_target
+
 def aggregate_feautures(df: pd.DataFrame) ->pd.DataFrame:
     """
     create aggregates customer level
@@ -134,10 +136,19 @@ def feature_enginering_pipeline(df: pd.DataFrame, target_col: str="label", apply
 
 if __name__ == "__main__":
     df = pd.read_csv('../data/raw/data.csv')
+    df_txn = df.copy()
+    df_txn['TransactionStartTime'] = pd.to_datetime(df_txn['TransactionStartTime'])
+
+    # run feature engineering pipeline
     X,y = feature_enginering_pipeline(df)
 
+    # save processed data
     X.to_csv('../data/processed/X_features.csv', index=False)
     y.to_csv('../data/processed/y_target.csv', index=False)
+
+    # create proxy target and save
+    df_processed = create_proxy_target(df_txn, X)
+    df_processed.to_csv('../data/processed/X_feautures_with_target.csv', index=False)
 
     print("Feature engineering completed successfully.")
 

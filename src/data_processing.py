@@ -70,9 +70,10 @@ def apply_WOE(X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
    """
    # Separate numeric and categorical
    numeric_cols = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
-   categorical_cols = X.select_dtypes(include=["object"]).columns.tolist()
+   if not numeric_cols:
+       return X  # No numeric columns to process
+   
    X_num = X[numeric_cols].copy()
-   X_cat = X[categorical_cols].copy()
    # --- WoE on numeric features ---
    binning_process = BinningProcess(
        variable_names=numeric_cols,
@@ -80,13 +81,9 @@ def apply_WOE(X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
    )
    binning_process.fit(X_num, y)
    X_num_woe = binning_process.transform(X_num, metric="woe")
-   # --- Simple encoding for categorical (frequency encoding) ---
-   for col in categorical_cols:
-       freq_map = X_cat[col].value_counts(normalize=True)
-       X_cat[col] = X_cat[col].map(freq_map)
-   # Combine
-   X_final = pd.concat([X_num_woe, X_cat], axis=1)
-   return X_final
+
+   X[numeric_cols] = X_num_woe
+   return X
 
 def feature_enginering_pipeline(df: pd.DataFrame, target_col: str="label", apply_woe_transform: bool=True):
     """
@@ -96,59 +93,62 @@ def feature_enginering_pipeline(df: pd.DataFrame, target_col: str="label", apply
     df = aggregate_feautures(df)
     df = feauture_extraction(df)
 
+    # drop identifier columns
+    df = df.drop(columns=["CustomerId", "TransactionId", "SubscriptionId", "AccountId", "BatchId",
+                          "ProductId", "ProviderId", "CurrencyCode", "ProductCategory", "ChannelId"])
+
     # drop raw timestamp
     df = df.drop(columns=["TransactionStartTime"])
 
     # separate target
-    y = df["FraudResult"]
-    X = df.drop(columns=["FraudResult"])
+    if target_col not in df.columns:
+        raise ValueError(f"Target column '{target_col}' not found in dataframe.")
+    df = df.dropna(subset=[target_col])
+    y = df[target_col]
+    X = df.drop(columns=[target_col])
 
     # identify column types
-    numeric_cols = X.select_dtypes(include=["int64", "float64"]).columns.to_list()
     categorical_cols = X.select_dtypes(include=["object"]).columns.to_list()
 
+   # One-Hot encoding for low-cardinality
+    if categorical_cols:
+        ohe = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+        X_ohe = pd.DataFrame(ohe.fit_transform(X[categorical_cols]),
+                             columns=ohe.get_feature_names_out(categorical_cols),
+                             index=X.index)
+        X = X.drop(columns=categorical_cols)
+        X = pd.concat([X, X_ohe], axis=1)
+    
     # apply WOE
     if apply_woe_transform:
         X_woe = apply_WOE(X,y)
-        return X_woe, y
 
-    # build preprocessing pipeline
-    preprocessor = dataprocessing_pipeline(numeric_cols, categorical_cols)
+    # Standardize numeric features
+    numeric_cols = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    scaler = StandardScaler()
+    X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
 
-    # transform data
-    X_processed = preprocessor.fit_transform(X)
+    if X.select_dtypes(include="object").shape[1] > 0:
+        raise ValueError("There are still categorical features in the dataset after processing.")
 
-    # convert back to a dataframe
-    feature_names = (
-        numeric_cols +
-        list(
-            preprocessor.named_transformers_["cat"]
-            .named_steps["encoder"]
-            .get_feature_names_out(categorical_cols)
-        )
-    )
-
-    X_processed = pd.DataFrame(X_processed, columns=feature_names)
-
-    
-
-    return X_processed,y 
+    return X,y 
 
 if __name__ == "__main__":
-    df = pd.read_csv('../data/raw/data.csv')
-    df_txn = df.copy()
+    df_txn = pd.read_csv('../data/raw/data.csv')
     df_txn['TransactionStartTime'] = pd.to_datetime(df_txn['TransactionStartTime'])
 
+    # create proxy target and save
+    df_with_target = create_proxy_target(df_txn)
+    df_with_target.to_csv('../data/processed/X_feautures_with_target.csv', index=False)
+
     # run feature engineering pipeline
-    X,y = feature_enginering_pipeline(df)
+    X,y = feature_enginering_pipeline(df_with_target, target_col="proxy_target")
 
     # save processed data
     X.to_csv('../data/processed/X_features.csv', index=False)
     y.to_csv('../data/processed/y_target.csv', index=False)
 
-    # create proxy target and save
-    df_processed = create_proxy_target(df_txn, X)
-    df_processed.to_csv('../data/processed/X_feautures_with_target.csv', index=False)
+    
 
     print("Feature engineering completed successfully.")
 

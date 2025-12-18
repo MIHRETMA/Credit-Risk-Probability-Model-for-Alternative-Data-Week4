@@ -12,3 +12,7 @@ scikit-learn
 # # data pipeline
 xverse
 optbinning
+
+# # ml
+mlflow
+pytest

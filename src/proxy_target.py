@@ -3,7 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 
 
-def create_proxy_target(df_txn:pd.DataFrame, df_features:pd.DataFrame) -> pd.DataFrame:
+def create_proxy_target(df_txn:pd.DataFrame) -> pd.DataFrame:
     """
     Create a proxy target variable by clustering the feature set.
 
@@ -33,9 +33,9 @@ def create_proxy_target(df_txn:pd.DataFrame, df_features:pd.DataFrame) -> pd.Dat
     rfm_df['proxy_target'] = (rfm_df['cluster'] == high_risk_cluster).astype(int)
 
     # Convert CustomerId to string for merging
-    df_features['CustomerId'] = df_features['CustomerId'].astype(str)
+    df_txn['CustomerId'] = df_txn['CustomerId'].astype(str)
     rfm_df['CustomerId'] = rfm_df['CustomerId'].astype(str)
 
     # Merge proxy target back to original dataframe
-    df_merged = df_features.merge(rfm_df[['CustomerId', 'proxy_target']], on='CustomerId', how='left')
-    return df_merged
+    df_txn = df_txn.merge(rfm_df[['CustomerId', 'proxy_target']], on='CustomerId', how='left')
+    return df_txn

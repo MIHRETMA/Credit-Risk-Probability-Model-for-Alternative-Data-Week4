@@ -20,3 +20,5 @@ def test_feature_extraction_columns():
    assert "Txn_day" in df_out.columns
    assert "Txn_month" in df_out.columns
    assert "Txn_year" in df_out.columns
+
+

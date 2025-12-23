@@ -1,7 +1,7 @@
 /data
 /.venv
 mlflow.db
-/src/mlruns
+src/mlruns
 /src/mlflow.db
 __pycache__/
 /.venv
